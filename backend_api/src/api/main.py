@@ -1,33 +1,70 @@
-... (unchanged portions above)
-    file_path = os.path.join(UPLOAD_ROOT, meta["filename"])
-    if not os.path.exists(file_path):
-        log_and_protect_event(
-            "file_download_deleted", request, current_user, {"file_id": file_id}
-        )
-        raise HTTPException(status_code=410, detail="File deleted")
-    # LINT: break at operator:
-    media_type = (
-        meta["content_type"]
-        or mimetypes.guess_type(meta["original_filename"])[0]
-    )
-    audit_log_event(
-        event_type="file_downloaded",
-        user_id=current_user["user_id"],
-        role=current_user["role"],
-        metadata={"file_id": file_id}
-    )
-    return FileResponse(
-        path=file_path,
-        filename=meta["original_filename"],
-        media_type=media_type,
-        headers={
-            "X-File-Module": meta["module"] or "",
-            "X-Uploaded-By": str(meta["user_id"] or "")
-        }
-    )
+import os
+import sqlite3
+from typing import List
+from fastapi import FastAPI, Request, Depends
+from uuid import uuid4
+
+# Import project-specific utils and models
+from .security_utils import (
+    require_role,
+    audit_log_event,
+    redact_sensitive_fields,
+    Role
+)
+
+# ---- Additional models for file upload/download ----
+from pydantic import BaseModel, Field
+
+DATABASE_PATH = os.environ.get("SQLITE_PATH", "./db.sqlite3")
+UPLOAD_ROOT = os.environ.get("UPLOAD_ROOT", "./uploads")
 
 
-# PUBLIC_INTERFACE
+class FileUploadMeta(BaseModel):
+    file_id: str = Field(..., description="File ID")
+    user_id: int = Field(..., description="Uploader's user id")
+    original_filename: str = Field(..., description="Original filename")
+    filename: str = Field(..., description="Saved path/filename")
+    content_type: str = Field(..., description="Mime type (as determined or declared)")
+    upload_time: str = Field(..., description="Timestamp")
+    module: str = Field(None, description="Optional: module context for file")
+
+
+class VideoConsultRequest(BaseModel):
+    doctor_id: int = Field(..., description="Doctor's user id")
+    user_id: int = Field(..., description="User's id requesting session")
+    purpose: str = Field(..., description="Purpose of video consultation")
+
+
+class VideoConsultResponse(BaseModel):
+    session_id: str
+    join_url: str
+
+
+class AIChatPrompt(BaseModel):
+    user_id: int = Field(..., description="Sender user id")
+    message: str = Field(..., description="Prompt or chat message text")
+
+
+class AIChatResponse(BaseModel):
+    response: str
+
+
+class MapResourceRequest(BaseModel):
+    search: str
+    location: str
+
+
+class MapResourceResponse(BaseModel):
+    result: dict
+
+
+app = FastAPI(
+    title="ArogyaMitr API",
+    version="1.0.0",
+    description="Backend for ArogyaMitr project"
+)
+
+
 @app.get(
     "/files/list",
     response_model=List[FileUploadMeta],
@@ -63,7 +100,6 @@ def list_my_files(
             )
         }
     )
-    # LINT: break into multiple lines
     return [
         FileUploadMeta(
             **redact_sensitive_fields(
@@ -75,7 +111,6 @@ def list_my_files(
     ]
 
 
-# PUBLIC_INTERFACE
 @app.post(
     "/integration/video/start-session",
     response_model=VideoConsultResponse,
@@ -101,7 +136,7 @@ def start_video_consult(
         }
     )
     dummy_session_id = str(uuid4())
-    # LINT: break url concat at operator
+    # break url concat at operator and max 100 chars
     dummy_url = (
         "https://videoconsult.staging.arogyamitr.com/join/"
         f"{dummy_session_id}"
@@ -112,7 +147,6 @@ def start_video_consult(
     )
 
 
-# PUBLIC_INTERFACE
 @app.post(
     "/integration/ai/chat",
     response_model=AIChatResponse,
@@ -133,16 +167,17 @@ def ai_chat_endpoint(
             "msg_chars": len(request.message)
         }
     )
-    # LINT: break stubbed text over 100 chars in multiple lines
+    # break stubbed text over 100 chars in multiple lines
     text = (
-        "🩺 Thank you for your question. (This is a stubbed response. AI/doctor assistance will be "
-        "integrated here in production. You asked: "
-        f"{request.message[:200]})"
+        "🩺 Thank you for your question. (This is a stubbed response. "
+        "AI/doctor assistance will be integrated here in production. You asked: "
+        f"{request.message[:80]}"
+        f"{request.message[80:160]}"
+        f"{request.message[160:200]})"
     )
     return AIChatResponse(response=text)
 
 
-# PUBLIC_INTERFACE
 @app.post(
     "/integration/maps/search",
     response_model=MapResourceResponse,
