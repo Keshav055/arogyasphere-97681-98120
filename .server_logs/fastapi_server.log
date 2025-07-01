@@ -35,8 +35,6 @@ Traceback (most recent call last):
   File "/home/kavia/workspace/code-generation/arogyasphere-97681-98120/backend_api/venv/lib/python3.12/site-packages/uvicorn/config.py", line 435, in load
     self.loaded_app = import_from_string(self.app)
                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/kavia/workspace/code-generation/arogyasphere-97681-98120/backend_api/venv/lib/python3.12/site-packages/uvicorn/importer.py", line 22, in import_from_string
-    raise exc from None
   File "/home/kavia/workspace/code-generation/arogyasphere-97681-98120/backend_api/venv/lib/python3.12/site-packages/uvicorn/importer.py", line 19, in import_from_string
     module = importlib.import_module(module_str)
              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -47,8 +45,11 @@ Traceback (most recent call last):
   File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
   File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
   File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
-  File "<frozen importlib._bootstrap_external>", line 995, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 991, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1129, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1059, in source_to_code
   File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
-  File "/home/kavia/workspace/code-generation/arogyasphere-97681-98120/backend_api/src/api/main.py", line 12, in <module>
-    import aiofiles
-ModuleNotFoundError: No module named 'aiofiles'
+  File "/home/kavia/workspace/code-generation/arogyasphere-97681-98120/backend_api/src/api/main.py", line 1
+    ... (unchanged portions above)
+         ^^^^^^^^^^^^^^^^^^
+SyntaxError: invalid syntax. Perhaps you forgot a comma?
