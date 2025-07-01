@@ -49,6 +49,6 @@ Traceback (most recent call last):
   File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
   File "<frozen importlib._bootstrap_external>", line 995, in exec_module
   File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
-  File "/home/kavia/workspace/code-generation/arogyasphere-97681-98120/backend_api/src/api/main.py", line 8, in <module>
-    from jose import JWTError, jwt
+  File "/home/kavia/workspace/code-generation/arogyasphere-97681-98120/backend_api/src/api/main.py", line 10, in <module>
+    from jose import jwt
 ModuleNotFoundError: No module named 'jose'
