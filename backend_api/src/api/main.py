@@ -262,8 +262,9 @@ def start_video_consult(
     return VideoConsultResponse(
         session_id=dummy_session_id,
         join_url=(
-            "https://videoconsult.staging.arogyamitr.com/join/"
-            f"{dummy_session_id}"
+            "https://videoconsult.staging.arogyamitr.com/"
+            "join/"
+            + str(dummy_session_id)
         ),
     )
 
@@ -290,11 +291,14 @@ def ai_chat_endpoint(
     )
     return AIChatResponse(
         response=(
-            "🩺 Thank you for your question. (This is a stubbed response. "
-            "AI/doctor assistance will be integrated here in production. You asked: "
-            f"{request.message[:80]}"
-            f"{request.message[80:160]}"
-            f"{request.message[160:200]})"
+            "🩺 Thank you for your question. "
+            "(This is a stubbed response. "
+            "AI/doctor assistance will be integrated here in production. "
+            "You asked: "
+            + f"{request.message[:80]}"
+            + f"{request.message[80:160]}"
+            + f"{request.message[160:200]}"
+            + ")"
         )
     )
 
