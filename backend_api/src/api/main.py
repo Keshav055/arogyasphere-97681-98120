@@ -75,12 +75,13 @@ def signup(request: SignupRequest):
     )
 
     try:
+        # Note: For production, password must be hashed (e.g., using passlib).
         cur.execute(
             "INSERT INTO users (email, phone, password, role) VALUES (?, ?, ?, ?)",
             (
-                request.email,
-                request.phone,
-                request.password,
+                str(request.email),
+                str(request.phone),
+                str(request.password),  # Plaintext for now; replace with hashed.
                 request.role.value if isinstance(request.role, Role) else request.role
             )
         )
@@ -124,21 +125,23 @@ def signup(request: SignupRequest):
         conn.close()
 
     # Issue JWT, audit event, and return the response
-    token = create_jwt_token(user_id, request.role)
+    # Ensure the role is always stored and returned as a string value.
+    role_value = request.role.value if isinstance(request.role, Role) else str(request.role)
+    token = create_jwt_token(user_id, role_value)
     audit_log_event(
         event_type="signup",
         user_id=user_id,
-        role=request.role,
+        role=role_value,
         metadata={
-            "email": request.email,
-            "phone": request.phone
+            "email": str(request.email),
+            "phone": str(request.phone)
         }
     )
     return SignupResponse(
         user_id=user_id,
         email=request.email,
         phone=request.phone,
-        role=request.role,
+        role=role_value,
         token=token
     )
 
@@ -202,7 +205,7 @@ def list_my_files(
     conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
-    if current_user["role"] in [Role.admin, Role.doctor]:
+    if str(current_user["role"]) in [Role.admin.value, Role.doctor.value]:
         cur.execute("SELECT * FROM file_uploads ORDER BY upload_time DESC")
     else:
         cur.execute(
@@ -218,7 +221,7 @@ def list_my_files(
         metadata={
             "scope": (
                 "admin/doctor"
-                if current_user["role"] in [Role.admin, Role.doctor]
+                if str(current_user["role"]) in [Role.admin.value, Role.doctor.value]
                 else "patient"
             )
         }
@@ -248,10 +251,11 @@ def start_video_consult(
     request: VideoConsultRequest,
     current_user: dict = Depends(require_role(Role.patient, Role.doctor))
 ):
+    role_value = current_user["role"].value if hasattr(current_user["role"], 'value') else str(current_user["role"])
     audit_log_event(
         event_type="video_consult_start",
         user_id=current_user["user_id"],
-        role=current_user["role"],
+        role=role_value,
         metadata={
             "doctor_id": request.doctor_id,
             "user_id": request.user_id,
@@ -259,13 +263,14 @@ def start_video_consult(
         }
     )
     dummy_session_id = str(uuid4())
+    join_url = (
+        "https://videoconsult.staging.arogyamitr.com/"
+        "join/"
+    )
+    join_url += str(dummy_session_id)
     return VideoConsultResponse(
         session_id=dummy_session_id,
-        join_url=(
-            "https://videoconsult.staging.arogyamitr.com/"
-            "join/"
-            + str(dummy_session_id)
-        ),
+        join_url=join_url,
     )
 
 
@@ -280,26 +285,33 @@ def ai_chat_endpoint(
     request: AIChatPrompt,
     current_user: dict = Depends(require_role(Role.patient, Role.doctor, Role.admin))
 ):
+    role_value = current_user["role"].value if hasattr(current_user["role"], 'value') else str(current_user["role"])
     audit_log_event(
         event_type="ai_chat",
         user_id=current_user["user_id"],
-        role=current_user["role"],
+        role=role_value,
         metadata={
             "user_id": request.user_id,
             "msg_chars": len(request.message)
         }
     )
+    chat_intro = (
+        "🩺 Thank you for your question. "
+        "(This is a stubbed response. "
+        "AI/doctor assistance will be integrated here in production. "
+        "You asked: "
+    )
+    msg_part1 = f"{request.message[:80]}"
+    msg_part2 = f"{request.message[80:160]}"
+    msg_part3 = f"{request.message[160:200]}"
+    chat_outro = ")"
+    response_text = (
+        chat_intro + msg_part1 +
+        msg_part2 + msg_part3 +
+        chat_outro
+    )
     return AIChatResponse(
-        response=(
-            "🩺 Thank you for your question. "
-            "(This is a stubbed response. "
-            "AI/doctor assistance will be integrated here in production. "
-            "You asked: "
-            + f"{request.message[:80]}"
-            + f"{request.message[80:160]}"
-            + f"{request.message[160:200]}"
-            + ")"
-        )
+        response=response_text
     )
 
 
@@ -314,10 +326,11 @@ def map_search(
     request: MapResourceRequest,
     current_user: dict = Depends(require_role(Role.patient, Role.doctor, Role.admin))
 ):
+    role_value = current_user["role"].value if hasattr(current_user["role"], 'value') else str(current_user["role"])
     audit_log_event(
         event_type="map_search",
         user_id=current_user["user_id"],
-        role=current_user["role"],
+        role=role_value,
         metadata={
             "query": request.search,
             "location": request.location
@@ -329,7 +342,8 @@ def map_search(
         "found": False,
         "resources": [],
         "note": (
-            "Stub only. Map provider coming soon."
+            "Stub only. "
+            "Map provider coming soon."
         ),
     }
     return MapResourceResponse(result=result)
