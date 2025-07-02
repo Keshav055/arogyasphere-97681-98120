@@ -411,15 +411,41 @@ def list_education():
     return {"message": "Stub education hub"}
 
 # --- AI CHAT (STUB) ---
+class AIChatInput(BaseModel):
+    """Schema for AI chat input."""
+    input_text: str = Field(..., description="Text sent to the AI assistant.")
+
+# PUBLIC_INTERFACE
 @ai_chat_router.post("/", summary="Chat with AI assistant")
-def chat_with_ai(input_text: str):
-    return {"message": f"AI chat not implemented. You said '{input_text}'"}
+def chat_with_ai(body: AIChatInput):
+    """Receives user input and returns a stub AI response."""
+    return {"message": f"AI chat not implemented. You said '{body.input_text}'"}
 
 # --- UTILS: DB HEALTHCHECK ---
+import os
+import re
+
+# PUBLIC_INTERFACE
 @utils_router.get("/health/db", summary="Check database health")
 def db_health():
+    """
+    Checks database health for SQLite by ensuring the DB file exists and can be connected to.
+    Uses DATABASE_URL to derive correct DB path (robust across working directories).
+    """
     try:
-        conn = sqlite3.connect("arogyamitr.db")
+        # Extract SQLite file path from DATABASE_URL
+        if DATABASE_URL.startswith("sqlite:///"):
+            path = DATABASE_URL.replace("sqlite:///", "", 1)
+        elif DATABASE_URL.startswith("sqlite://"):
+            # Handles relative path
+            path = DATABASE_URL.replace("sqlite://", "", 1)
+        else:
+            raise Exception("DB healthcheck only supports SQLite in this install.")
+        db_path = os.path.abspath(path)
+        if not os.path.isfile(db_path):
+            raise FileNotFoundError(f"Database file not found: {db_path}")
+        # Try connecting using sqlite3 to exact file
+        conn = sqlite3.connect(db_path)
         conn.execute("SELECT 1")
         conn.close()
         return {"status": "ok"}
